@@ -76,3 +76,45 @@ class ScanResponseModel(BaseModel):
     base_url: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+
+
+class AnalysisResponseModel(BaseModel):
+    scan_id: str
+    analysis: Dict[str, Any]
+    error: Optional[str] = None
+
+
+@dataclass
+class AnalysisSummary:
+    scan_id: Optional[str]
+    status: Optional[str]
+    swagger_title: Optional[str]
+    swagger_version: Optional[str]
+    base_url: Optional[str]
+    total_requests: int
+    total_failures: int
+    avg_response_ms: Optional[float]
+    risk_level: str
+
+
+@dataclass
+class AnalysisIndicators:
+    sqli_error_hint: int
+    xss_reflected: int
+    status_5xx: int
+
+
+@dataclass
+class AnalysisFinding:
+    method: Optional[str]
+    path: Optional[str]
+    full_url: Optional[str]
+    indicator_samples: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class ScanAnalysis:
+    summary: AnalysisSummary
+    indicators: AnalysisIndicators
+    findings: List[AnalysisFinding] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)

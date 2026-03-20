@@ -1,7 +1,7 @@
 ﻿from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from src.domain.entities import ScanResult
+from src.domain.entities import ScanAnalysis, ScanResult
 
 class ScanRepository(ABC):
     @abstractmethod
@@ -19,4 +19,10 @@ class ScanRepository(ABC):
 class PluginRunner(ABC):
     @abstractmethod
     async def run(self, swagger_path: str, overrides: Optional[Dict[str, Any]] = None) -> ScanResult:
+        raise NotImplementedError
+
+
+class AnalysisProvider(ABC):
+    @abstractmethod
+    async def analyze(self, scan: Dict[str, Any]) -> ScanAnalysis:
         raise NotImplementedError
