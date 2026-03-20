@@ -222,7 +222,7 @@ async def run_scan(swagger_path: str, overrides: Optional[Dict[str, Any]] = None
                                 indicators["sqli_error_hint"] = True
                                 indicators_summary["sqli_error_hint"] = indicators_summary.get("sqli_error_hint", 0) + 1
 
-                        evidence = text[:MAX_EVIDENCE_CHARS] if error else ""
+                        evidence = text[:MAX_EVIDENCE_CHARS] if not error else ""
                         endpoint_results.append(
                             PayloadResult(
                                 payload=payload,
