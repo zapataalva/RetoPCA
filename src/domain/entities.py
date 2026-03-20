@@ -12,6 +12,7 @@ class PayloadResult:
     status_code: Optional[int]
     response_time_ms: Optional[float]
     response_size: Optional[int]
+    evidence: Optional[str] = None
     error: Optional[str] = None
     indicators: Dict[str, Any] = field(default_factory=dict)
 

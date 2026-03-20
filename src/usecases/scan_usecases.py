@@ -1,4 +1,5 @@
 ﻿from datetime import datetime, timezone
+from dataclasses import asdict
 from typing import Any, Dict, Optional, Tuple
 from uuid import uuid4
 
@@ -39,15 +40,19 @@ async def start_scan_sync(
         return scan_id, None, "failed", error_msg
     try:
         result = await runner.run(swagger_path, overrides)
+        result_dict = asdict(result)
+        result_dict.pop("scan_id", None)
+        result_dict.pop("created_at", None)
+        result_dict.pop("updated_at", None)
         await repo.update_scan(
             scan_id,
             {
                 "status": "completed",
                 "updated_at": datetime.now(timezone.utc),
-                "result": result,
+                "result": result_dict,
             },
         )
-        return scan_id, result, "completed", None
+        return scan_id, result_dict, "completed", None
     except Exception as exc:
         error_msg = f"runner.run: {type(exc).__name__}: {str(exc) or repr(exc)}"
         try:
@@ -66,3 +71,4 @@ async def start_scan_sync(
 
 async def get_scan(repo: ScanRepository, scan_id: str) -> Dict[str, Any] | None:
     return await repo.get_scan(scan_id)
+

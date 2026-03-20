@@ -1,11 +1,11 @@
-﻿import argparse
-import asyncio
-import json
+﻿import json
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
+from src.domain.entities import EndpointResult, Metrics, PayloadResult, ScanResult
 from src.infrastructure.plugins.payloads import PAYLOADS
 
 SQLI_ERROR_HINTS = ["sql", "syntax", "mysql", "psql", "sqlite", "ora-"]
@@ -121,14 +121,14 @@ async def _call_endpoint(
         return None, elapsed, None, str(exc), ""
 
 
-async def run_scan(swagger_path: str, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def run_scan(swagger_path: str, overrides: Optional[Dict[str, Any]] = None) -> ScanResult:
     with open(swagger_path, "r", encoding="utf-8") as f:
         spec = json.load(f)
 
     base_url = _extract_base_url(spec)
     title, version = _extract_swagger_info(spec)
 
-    endpoints: List[Dict[str, Any]] = []
+    endpoints: List[EndpointResult] = []
     total_requests = 0
     total_failures = 0
     total_resp_time = 0.0
@@ -153,7 +153,7 @@ async def run_scan(swagger_path: str, overrides: Optional[Dict[str, Any]] = None
                 if body_param and body_param.get("schema"):
                     body_schema = body_param.get("schema") or {}
 
-                endpoint_results: List[Dict[str, Any]] = []
+                endpoint_results: List[PayloadResult] = []
 
                 for payload_group in PAYLOADS:
                     ptype = payload_group["type"]
@@ -224,64 +224,65 @@ async def run_scan(swagger_path: str, overrides: Optional[Dict[str, Any]] = None
 
                         evidence = text[:MAX_EVIDENCE_CHARS] if error else ""
                         endpoint_results.append(
-                            {
-                                "payload": payload,
-                                "payload_type": ptype,
-                                "location": location,
-                                "status_code": status,
-                                "response_time_ms": elapsed,
-                                "response_size": size,
-                                "error": error,
-                                "evidence": evidence,
-                                "indicators": indicators,
-                            }
+                            PayloadResult(
+                                payload=payload,
+                                payload_type=ptype,
+                                location=location,
+                                status_code=status,
+                                response_time_ms=elapsed,
+                                response_size=size,
+                                error=error,
+                                evidence=evidence,
+                                indicators=indicators,
+                            )
                         )
 
                 endpoints.append(
-                    {
-                        "method": method.upper(),
-                        "path": path,
-                        "full_url": full_url,
-                        "params": {"query": [p.get("name") for p in query_params]},
-                        "body": {"schema": body_schema} if body_schema else None,
-                        "results": endpoint_results,
-                    }
+                    EndpointResult(
+                        method=method.upper(),
+                        path=path,
+                        full_url=full_url,
+                        params={"query": [p.get("name") for p in query_params]},
+                        body={"schema": body_schema} if body_schema else None,
+                        results=endpoint_results,
+                    )
                 )
 
     avg_response = round(total_resp_time / total_requests, 2) if total_requests else 0.0
-    metrics = {
-        "total_endpoints": len(endpoints),
-        "total_requests": total_requests,
-        "total_failures": total_failures,
-        "avg_response_ms": avg_response,
-        "by_status_code": by_status,
-        "by_payload_type": by_payload_type,
-        "indicators_summary": indicators_summary,
-    }
+    metrics = Metrics(
+        total_endpoints=len(endpoints),
+        total_requests=total_requests,
+        total_failures=total_failures,
+        avg_response_ms=avg_response,
+        by_status_code=by_status,
+        by_payload_type=by_payload_type,
+        indicators_summary=indicators_summary,
+    )
 
-    return {
-        "status": "completed",
-        "swagger_title": title,
-        "swagger_version": version,
-        "base_url": base_url,
-        "endpoints": endpoints,
-        "metrics": metrics,
-    }
+    now = datetime.now(timezone.utc)
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--swagger", required=True)
-    args = parser.parse_args()
-
-    result = asyncio.run(run_scan(args.swagger))
-    print(json.dumps(result, ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()
+    return ScanResult(
+        scan_id="",
+        status="completed",
+        created_at=now,
+        updated_at=now,
+        swagger_title=title,
+        swagger_version=version,
+        base_url=base_url,
+        endpoints=endpoints,
+        metrics=metrics,
+    )
 
 
 class DastScannerRunner:
-    async def run(self, swagger_path: str, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def run(self, swagger_path: str, overrides: Optional[Dict[str, Any]] = None) -> ScanResult:
         return await run_scan(swagger_path, overrides)
+
+
+
+
+
+
+
+
+
