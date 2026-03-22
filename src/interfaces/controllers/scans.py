@@ -6,10 +6,14 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from src.domain.ports import PluginRunner, ScanRepository
+from src.domain.ports import AnalysisProvider, PluginRunner, ScanRepository
 from src.core.dependencies import get_scan_repository
+from src.usecases.analysis_usecases import analyze_scan
 from src.usecases.scan_usecases import get_scan, start_scan_sync
-from src.domain.entities import CreateScanResponse, ScanResponseModel
+from dataclasses import asdict
+
+from src.domain.entities import AnalysisResponseModel, CreateScanResponse, ScanResponseModel
+from src.infrastructure.services.analysis_provider import LocalAnalysisProvider
 from src.infrastructure.plugins.dast_scanner import DastScannerRunner
 
 router = APIRouter()
@@ -91,3 +95,15 @@ async def read_scan(scan_id: str, repo: ScanRepository = Depends(get_scan_reposi
         result=doc.get("result"),
         error=doc.get("error"),
     )
+
+
+@router.post("/scans/{scan_id}/analysis", response_model=AnalysisResponseModel)
+async def analyze_scan_endpoint(
+    scan_id: str, repo: ScanRepository = Depends(get_scan_repository)
+) -> AnalysisResponseModel:
+    provider: AnalysisProvider = LocalAnalysisProvider()
+    analysis = await analyze_scan(repo, provider, scan_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Scan no encontrado")
+    return AnalysisResponseModel(scan_id=scan_id, analysis=asdict(analysis), error=None)
+

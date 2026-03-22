@@ -27,7 +27,6 @@ Servicio sincronico que recibe un archivo OpenAPI/Swagger en JSON, ejecuta el es
 ## Ejecutar local
 ```bash
 pip install -r requirements.txt
-set PYTHONPATH=.
 py -m uvicorn main:app --reload
 ```
 
@@ -37,5 +36,4 @@ En el repositorio existe `swagger_prueba.json`, úsalo como archivo de ejemplo p
 ## API
 - `POST /security/scans` (multipart form) campo `file` con JSON. Devuelve resultado en la misma respuesta.
 - `GET /security/scans/{scan_id}`
-
-
+- `POST /security/scans/{scan_id}/analysis` Devuelve un analisis en JSON con hallazgos y recomendaciones
