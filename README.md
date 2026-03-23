@@ -26,6 +26,8 @@ Servicio sincronico que recibe un archivo OpenAPI/Swagger en JSON, ejecuta el es
 
 ## Ejecutar local
 ```bash
+py -m venv venv
+venv\Scripts\Activate.bat
 pip install -r requirements.txt
 py -m uvicorn main:app --reload
 ```
