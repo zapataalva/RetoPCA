@@ -5,7 +5,6 @@ from src.interfaces.controllers import scans
 from src.domain.exceptions import BusinessException
 from src.infrastructure.handlers.exception_handler import business_exception_handler
 
-# Inicializa la aplicaci�n FastAPI con t�tulo y versi�n
 app = FastAPI(
     root_path="/security",
     title="Security Scan",
@@ -20,9 +19,7 @@ app = FastAPI(
 )
 
 # Registro de rutas (endpoints definidos en otros m�dulos)
-app.include_router(scans.router)      # Rutas relacionadas con escaneo front-end
-
-# Configuraci�n b�sica de logging
+app.include_router(scans.router)     
 logging.basicConfig(
     level=logging.INFO, 
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",  # Formato de salida

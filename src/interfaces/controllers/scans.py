@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from src.domain.ports import AnalysisProvider, PluginRunner, ScanRepository
 from src.core.dependencies import get_scan_repository
@@ -13,6 +13,12 @@ from src.usecases.scan_usecases import get_scan, start_scan_sync
 from dataclasses import asdict
 
 from src.domain.entities import AnalysisResponseModel, CreateScanResponse, ScanResponseModel
+from src.domain.exceptions import (
+    InvalidFileTypeException,
+    InvalidJsonException,
+    InvalidOverridesException,
+    ScanNotFoundException,
+)
 from src.infrastructure.services.analysis_provider import LocalAnalysisProvider
 from src.infrastructure.plugins.dast_scanner import DastScannerRunner
 
@@ -50,13 +56,13 @@ async def create_scan(
 ) -> CreateScanResponse:
     runner: PluginRunner = DastScannerRunner()
     if not file.filename.lower().endswith(".json"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser JSON")
+        raise InvalidFileTypeException(file.filename)
 
     content = await file.read()
     try:
         spec = json.loads(content.decode("utf-8"))
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="JSON inválido") from exc
+        raise InvalidJsonException() from exc
 
     info = _extract_swagger_info(spec)
     overrides_dict = None
@@ -64,7 +70,7 @@ async def create_scan(
         try:
             overrides_dict = json.loads(overrides)
         except Exception as exc:
-            raise HTTPException(status_code=400, detail="Overrides inválido (debe ser JSON)") from exc
+            raise InvalidOverridesException() from exc
 
     tmp_dir = os.path.join(os.getcwd(), "tmp")
     os.makedirs(tmp_dir, exist_ok=True)
@@ -82,7 +88,7 @@ async def create_scan(
 async def read_scan(scan_id: str, repo: ScanRepository = Depends(get_scan_repository)) -> ScanResponseModel:
     doc = await get_scan(repo, scan_id)
     if not doc:
-        raise HTTPException(status_code=404, detail="Scan no encontrado")
+        raise ScanNotFoundException(scan_id)
 
     return ScanResponseModel(   
         scan_id=doc.get("_id"),
@@ -103,7 +109,5 @@ async def analyze_scan_endpoint(
 ) -> AnalysisResponseModel:
     provider: AnalysisProvider = LocalAnalysisProvider()
     analysis = await analyze_scan(repo, provider, scan_id)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="Scan no encontrado")
     return AnalysisResponseModel(scan_id=scan_id, analysis=asdict(analysis), error=None)
 
